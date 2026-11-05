@@ -54,13 +54,15 @@ func setupTestDB(t *testing.T) *pgxpool.Pool {
 	)
 
 	if databaseURL == "" {
-		t.Skip("TEST_DATABASE_URL is not see")
+		t.Skip("TEST_DATABASE_URL is not set")
 	}
 
-	if !strings.Contains(databaseURL, "luggage_test") {
-		t.Fatal(
-			"refusing to run integration test against non-test database",
-		)
+	config, err := pgxpool.ParseConfig(databaseURL)
+	if err != nil {
+		t.Fatalf("parse test database URL: %v", err)
+	}
+	if config.ConnConfig.Database != "luggage_test" {
+		t.Fatalf("refusing to run against database %q", config.ConnConfig.Database)
 	}
 
 	ctx, cancel := context.WithTimeout(
