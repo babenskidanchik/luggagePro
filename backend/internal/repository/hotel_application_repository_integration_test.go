@@ -134,6 +134,7 @@ func TestHotelApplicationApproveIntegration(
 		`
 			INSERT INTO hotel_applications (
 				user_id,
+				venue_type,
 				legal_name,
 				display_name,
 				tax_id,
@@ -143,6 +144,7 @@ func TestHotelApplicationApproveIntegration(
 			)
 			VALUES (
 				CAST($1 AS uuid),
+				'luggage_shop',
 				$2,
 				$3,
 				$4,
@@ -191,6 +193,14 @@ func TestHotelApplicationApproveIntegration(
 			"expected hotel user %q, got %q",
 			guestID,
 			hotel.UserID,
+		)
+	}
+
+	if hotel.VenueType != domain.VenueTypeLuggageShop {
+		t.Fatalf(
+			"expected venue type %q, got %q",
+			domain.VenueTypeLuggageShop,
+			hotel.VenueType,
 		)
 	}
 
