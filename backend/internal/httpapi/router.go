@@ -141,12 +141,11 @@ func NewRouter(
 		hotelLocationHandler.Update,
 	)
 
-	hotelRoutes.POST(
-		"/applications",
+
+	api.POST(
+		"/hotel/applications",
 		requireAuth,
-		middleware.RequireRole(
-			domain.RoleGuest,
-		),
+		middleware.RequireRole(domain.RoleGuest),
 		hotelApplicationHandler.Submit,
 	)
 
