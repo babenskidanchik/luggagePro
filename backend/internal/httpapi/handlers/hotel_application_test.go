@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -17,14 +18,16 @@ type fakeHotelApplicationService struct {
 	result *domain.HotelApplication
 	err    error
 	userID string
+	input  hotel.ApplicationInput
 }
 
 func (s *fakeHotelApplicationService) Submit(
 	_ context.Context,
 	userID string,
-	_ hotel.ApplicationInput,
+	input hotel.ApplicationInput,
 ) (*domain.HotelApplication, error) {
 	s.userID = userID
+	s.input = input
 
 	if s.err != nil {
 		return nil, s.err
@@ -42,6 +45,7 @@ func TestHotelApplicationHandlerSubmit(
 		result: &domain.HotelApplication{
 			ID:          "application-id",
 			UserID:      "user-id",
+			VenueType:   domain.VenueTypeHostel,
 			LegalName:   "Example LLC",
 			DisplayName: "Example Hotel",
 			TaxID:       "123456",
@@ -75,6 +79,7 @@ func TestHotelApplicationHandlerSubmit(
 	)
 
 	body := `{
+		"venue_type":"hostel",
 		"legal_name":"Example LLC",
 		"display_name":"Example Hotel",
 		"tax_id":"123456",
@@ -106,6 +111,26 @@ func TestHotelApplicationHandlerSubmit(
 			"expected 201, got %d: %s",
 			recorder.Code,
 			recorder.Body.String(),
+		)
+	}
+
+	if service.input.VenueType != domain.VenueTypeHostel {
+		t.Fatalf(
+			"expected service venue type %q, got %q",
+			domain.VenueTypeHostel,
+			service.input.VenueType,
+		)
+	}
+
+	var response map[string]interface{}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if response["venue_type"] != string(domain.VenueTypeHostel) {
+		t.Fatalf(
+			"expected response venue_type %q, got %v",
+			domain.VenueTypeHostel,
+			response["venue_type"],
 		)
 	}
 
