@@ -43,6 +43,7 @@ func TestApplicationServiceSubmit(
 		context.Background(),
 		"user-id",
 		ApplicationInput{
+			VenueType:   domain.VenueTypeHostel,
 			LegalName:   "  Example LLC  ",
 			DisplayName: "  Example Hotel  ",
 			TaxID:       "  123456789  ",
@@ -62,6 +63,14 @@ func TestApplicationServiceSubmit(
 		t.Fatalf(
 			"expected pending status, got %q",
 			result.Status,
+		)
+	}
+
+	if repository.created.VenueType != domain.VenueTypeHostel {
+		t.Fatalf(
+			"expected venue type %q, got %q",
+			domain.VenueTypeHostel,
+			repository.created.VenueType,
 		)
 	}
 
@@ -180,5 +189,60 @@ func TestApplicationServiceReturnsRepositoryError(
 			"expected repository error, got %v",
 			err,
 		)
+	}
+}
+
+func TestApplicationServiceDefaultsVenueTypeToHotel(
+	t *testing.T,
+) {
+	repository := &fakeApplicationRepository{}
+	service := NewApplicationService(repository)
+
+	_, err := service.Submit(
+		context.Background(),
+		"user-id",
+		ApplicationInput{
+			LegalName:   "Example LLC",
+			DisplayName: "Example Hotel",
+			TaxID:       "123456",
+			CountryCode: "GE",
+			City:        "Batumi",
+			Address:     "Some valid address",
+		},
+	)
+	if err != nil {
+		t.Fatalf("submit application: %v", err)
+	}
+
+	if repository.created.VenueType != domain.VenueTypeHotel {
+		t.Fatalf(
+			"expected default venue type %q, got %q",
+			domain.VenueTypeHotel,
+			repository.created.VenueType,
+		)
+	}
+}
+
+func TestApplicationServiceRejectsInvalidVenueType(
+	t *testing.T,
+) {
+	repository := &fakeApplicationRepository{}
+	service := NewApplicationService(repository)
+
+	_, err := service.Submit(
+		context.Background(),
+		"user-id",
+		ApplicationInput{
+			VenueType:   domain.VenueType("spaceship"),
+			LegalName:   "Example LLC",
+			DisplayName: "Example Venue",
+			TaxID:       "123456",
+			CountryCode: "GE",
+			City:        "Batumi",
+			Address:     "Some valid address",
+		},
+	)
+	if !errors.Is(err, ErrInvalidApplication) {
+		t.Fatalf("expected invalid application, got %v", err)
 	}
 }
