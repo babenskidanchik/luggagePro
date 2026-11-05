@@ -95,24 +95,21 @@ func (r *HotelApplicationRepository) Create(
 	if err != nil {
 		var pgErr *pgconn.PgError
 
-		if errors.As(err, &pgErr) &&
-			pgErr.Code == "23505" {
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 			switch pgErr.ConstraintName {
 			case "hotel_applications_user_unique":
-				return nil,
-					domain.ErrHotelApplicationAlreadyExists
-
+				return nil, domain.ErrHotelApplicationAlreadyExists
 			case "hotel_application_active_tax_id_unique_idx":
-				return nil,
-					domain.ErrHotelTaxIDAlreadyInUse
+				return nil, domain.ErrHotelTaxIDAlreadyInUse
 			}
-
-			return nil, fmt.Errorf(
-				"create hotel application: %w",
-				err,
-			)
 		}
+
+		return nil, fmt.Errorf(
+			"create hotel application: %w",
+			err,
+		)
 	}
+
 	return &created, nil
 }
 
