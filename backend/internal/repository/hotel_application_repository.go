@@ -30,6 +30,7 @@ func (r *HotelApplicationRepository) Create(
 	const query = `
 		INSERT INTO hotel_applications (
 			user_id,
+			venue_type,
 			legal_name,
 			display_name,
 			tax_id,
@@ -44,11 +45,13 @@ func (r *HotelApplicationRepository) Create(
 			$4,
 			$5,
 			$6,
-			$7
+			$7,
+			$8
 		)
 		RETURNING
 			CAST(id AS text),
 			CAST(user_id AS text),
+			venue_type,
 			legal_name,
 			display_name,
 			tax_id,
@@ -69,6 +72,7 @@ func (r *HotelApplicationRepository) Create(
 		ctx,
 		query,
 		application.UserID,
+		application.VenueType,
 		application.LegalName,
 		application.DisplayName,
 		application.TaxID,
@@ -78,6 +82,7 @@ func (r *HotelApplicationRepository) Create(
 	).Scan(
 		&created.ID,
 		&created.UserID,
+		&created.VenueType,
 		&created.LegalName,
 		&created.DisplayName,
 		&created.TaxID,
@@ -125,6 +130,7 @@ func (r *HotelApplicationRepository) ListPending(
 		SELECT
 			CAST(id AS text),
 			CAST(user_id AS text),
+			venue_type,
 			legal_name,
 			display_name,
 			tax_id,
@@ -168,6 +174,7 @@ func (r *HotelApplicationRepository) ListPending(
 
 		if err := rows.Scan(
 			&application.ID,
+			&application.VenueType,
 			&application.UserID,
 			&application.LegalName,
 			&application.DisplayName,
@@ -221,6 +228,7 @@ func (r *HotelApplicationRepository) Approve(
 	const applicationQuery = `
 		SELECT
 			CAST(user_id AS text),
+			venue_type,
 			display_name,
 			country_code,
 			city, 
@@ -233,6 +241,7 @@ func (r *HotelApplicationRepository) Approve(
 
 	var (
 		userID      string
+		venueType   domain.VenueType
 		displayName string
 		countryCode string
 		city        string
@@ -246,6 +255,7 @@ func (r *HotelApplicationRepository) Approve(
 		applicationID,
 	).Scan(
 		&userID,
+		&venueType,
 		&displayName,
 		&countryCode,
 		&city,
@@ -324,6 +334,7 @@ func (r *HotelApplicationRepository) Approve(
 		INSERT INTO hotels (
 			user_id,
 			application_id,
+			venue_type,
 			display_name,
 			country_code,
 			city,
@@ -335,12 +346,14 @@ func (r *HotelApplicationRepository) Approve(
 			$3,
 			$4,
 			$5,
-			$6
+			$6,
+			$7
 		)
 		RETURNING 
 			CAST(id AS text),
 			CAST(user_id AS text),
 			CAST(application_id AS text),
+			venue_type,
 			display_name,
 			country_code,
 			city,
@@ -357,6 +370,7 @@ func (r *HotelApplicationRepository) Approve(
 		createHotelQuery,
 		userID,
 		applicationID,
+		venueType,
 		displayName,
 		countryCode,
 		city,
@@ -365,6 +379,7 @@ func (r *HotelApplicationRepository) Approve(
 		&hotel.ID,
 		&hotel.UserID,
 		&hotel.ApplicationID,
+		&hotel.VenueType,
 		&hotel.DisplayName,
 		&hotel.CountryCode,
 		&hotel.City,

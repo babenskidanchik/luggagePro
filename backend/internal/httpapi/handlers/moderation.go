@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/babenskidanchik/luggage-platform/backend/internal/domain"
 	"github.com/babenskidanchik/luggage-platform/backend/internal/hotel"
@@ -30,6 +31,24 @@ type ModerationService interface {
 
 type ModerationHandler struct {
 	service ModerationService
+}
+
+type moderationApplicationResponse struct {
+	ID              string                        `json:"id"`
+	UserID          string                        `json:"user_id"`
+	VenueType       domain.VenueType              `json:"venue_type"`
+	LegalName       string                        `json:"legal_name"`
+	DisplayName     string                        `json:"display_name"`
+	TaxID           string                        `json:"tax_id"`
+	CountryCode     string                        `json:"country_code"`
+	City            string                        `json:"city"`
+	Address         string                        `json:"address"`
+	Status          domain.HotelApplicationStatus `json:"status"`
+	RejectionReason *string                       `json:"rejection_reason,omitempty"`
+	ReviewedBy      *string                       `json:"reviewed_by,omitempty"`
+	ReviewedAt      *time.Time                    `json:"reviewed_at,omitempty"`
+	CreatedAt       time.Time                     `json:"created_at"`
+	UpdatedAt       time.Time                     `json:"updated_at"`
 }
 
 func NewModerationHandler(
@@ -92,11 +111,37 @@ func (h *ModerationHandler) ListPending(
 		return
 	}
 
+	response := make(
+		[]moderationApplicationResponse,
+		0,
+		len(applications),
+	)
+
+	for _, application := range applications {
+		response = append(response, moderationApplicationResponse{
+			ID:              application.ID,
+			UserID:          application.UserID,
+			VenueType:       application.VenueType,
+			LegalName:       application.LegalName,
+			DisplayName:     application.DisplayName,
+			TaxID:           application.TaxID,
+			CountryCode:     application.CountryCode,
+			City:            application.City,
+			Address:         application.Address,
+			Status:          application.Status,
+			RejectionReason: application.RejectionReason,
+			ReviewedBy:      application.ReviewedBy,
+			ReviewedAt:      application.ReviewedAt,
+			CreatedAt:       application.CreatedAt,
+			UpdatedAt:       application.UpdatedAt,
+		})
+	}
+
 	c.JSON(
 		http.StatusOK,
 		gin.H{
-			"applications": applications,
-			"count":        len(applications),
+			"applications": response,
+			"count":        len(response),
 		},
 	)
 }

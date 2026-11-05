@@ -33,12 +33,13 @@ func NewHotelApplicationHandler(
 }
 
 type submitHotelApplicationRequest struct {
-	LegalName   string `json:"legal_name"`
-	DisplayName string `json:"display_name"`
-	TaxID       string `json:"tax_id"`
-	CountryCode string `json:"country_code"`
-	City        string `json:"city"`
-	Address     string `json:"address"`
+	VenueType   domain.VenueType `json:"venue_type"`
+	LegalName   string           `json:"legal_name"`
+	DisplayName string           `json:"display_name"`
+	TaxID       string           `json:"tax_id"`
+	CountryCode string           `json:"country_code"`
+	City        string           `json:"city"`
+	Address     string           `json:"address"`
 }
 
 func (h *HotelApplicationHandler) Submit(
@@ -85,6 +86,7 @@ func (h *HotelApplicationHandler) Submit(
 		c.Request.Context(),
 		user.ID,
 		hotel.ApplicationInput{
+			VenueType:   request.VenueType,
 			LegalName:   request.LegalName,
 			DisplayName: request.DisplayName,
 			TaxID:       request.TaxID,
@@ -142,6 +144,7 @@ func (h *HotelApplicationHandler) Submit(
 	c.JSON(
 		http.StatusCreated,
 		gin.H{
+			"venue_type":   application.VenueType,
 			"id":           application.ID,
 			"legal_name":   application.LegalName,
 			"display_name": application.DisplayName,

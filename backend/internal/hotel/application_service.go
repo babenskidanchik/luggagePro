@@ -20,6 +20,8 @@ type ApplicationRepository interface {
 }
 
 type ApplicationInput struct {
+	VenueType domain.VenueType
+
 	LegalName   string
 	DisplayName string
 	TaxID       string
@@ -71,7 +73,12 @@ func (s *ApplicationService) Submit(
 		input.Address,
 	)
 
+	if input.VenueType == "" {
+		input.VenueType = domain.VenueTypeHotel
+	}
+
 	if !validLength(userID, 1, 100) ||
+		!input.VenueType.IsValid() ||
 		!validLength(input.LegalName, 2, 255) ||
 		!validLength(input.DisplayName, 2, 255) ||
 		!validLength(input.TaxID, 2, 64) ||
@@ -83,6 +90,7 @@ func (s *ApplicationService) Submit(
 
 	application := &domain.HotelApplication{
 		UserID:      userID,
+		VenueType:   input.VenueType,
 		LegalName:   input.LegalName,
 		DisplayName: input.DisplayName,
 		TaxID:       input.TaxID,

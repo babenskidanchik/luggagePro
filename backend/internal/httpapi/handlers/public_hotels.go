@@ -34,13 +34,14 @@ func NewPublicHotelHandler(
 }
 
 type publicHotelResponse struct {
-	ID          string   `json:"id"`
-	DisplayName string   `json:"display_name"`
-	CountryCode string   `json:"country_code"`
-	City        string   `json:"city"`
-	Address     string   `json:"address"`
-	Latitude    *float64 `json:"latitude,omitempty"`
-	Longitude   *float64 `json:"longitude,omitempty"`
+	VenueType   domain.VenueType `json:"venue_type"`
+	ID          string           `json:"id"`
+	DisplayName string           `json:"display_name"`
+	CountryCode string           `json:"country_code"`
+	City        string           `json:"city"`
+	Address     string           `json:"address"`
+	Latitude    *float64         `json:"latitude,omitempty"`
+	Longitude   *float64         `json:"longitude,omitempty"`
 }
 
 func (h *PublicHotelHandler) ListByCity(
@@ -122,6 +123,7 @@ func (h *PublicHotelHandler) ListByCity(
 		response = append(
 			response,
 			publicHotelResponse{
+				VenueType:   item.VenueType,
 				ID:          item.ID,
 				DisplayName: item.DisplayName,
 				CountryCode: item.CountryCode,
