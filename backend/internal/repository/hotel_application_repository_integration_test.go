@@ -172,6 +172,28 @@ func TestHotelApplicationApproveIntegration(
 	repository :=
 		NewHotelApplicationRepository(db)
 
+	applications, err := repository.ListPending(ctx, 10, 0)
+	if err != nil {
+		t.Fatalf("list pending applications: %v", err)
+	}
+	if len(applications) != 1 {
+		t.Fatalf("expected 1 pending application, got %d", len(applications))
+	}
+	if applications[0].UserID != guestID {
+		t.Fatalf(
+			"expected pending application user %q, got %q",
+			guestID,
+			applications[0].UserID,
+		)
+	}
+	if applications[0].VenueType != domain.VenueTypeLuggageShop {
+		t.Fatalf(
+			"expected pending application venue type %q, got %q",
+			domain.VenueTypeLuggageShop,
+			applications[0].VenueType,
+		)
+	}
+
 	hotel, err := repository.Approve(
 		ctx,
 		applicationID,
