@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/babenskidanchik/luggage-platform/backend/internal/domain"
+	"github.com/babenskidanchik/luggage-platform/backend/internal/migrate"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -23,15 +24,14 @@ func TestHotelApplicationApproveIntegration(
 		t.Skip("TEST_DATABASE_URL is not set")
 	}
 
-	// Security gate: integration test must never touch
-	// the development/production database.
-	if !strings.Contains(
-		databaseURL,
-		"luggage_test",
-	) {
-		t.Fatalf(
-			"refusing to run against non-test database",
-		)
+	// Security gate: check the parsed database name, not a substring
+	// of the connection URL (which could match a host or password).
+	config, err := pgxpool.ParseConfig(databaseURL)
+	if err != nil {
+		t.Fatalf("parse test database URL: %v", err)
+	}
+	if config.ConnConfig.Database != "luggage_test" {
+		t.Fatalf("refusing to run against database %q", config.ConnConfig.Database)
 	}
 
 	ctx, cancel := context.WithTimeout(
@@ -57,6 +57,10 @@ func TestHotelApplicationApproveIntegration(
 			"ping test database: %v",
 			err,
 		)
+	}
+
+	if err := migrate.Run(ctx, db); err != nil {
+		t.Fatalf("run test migrations: %v", err)
 	}
 
 	// Isolate this test from existing test data.

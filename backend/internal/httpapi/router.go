@@ -1,6 +1,8 @@
 package httpapi
 
 import (
+	"time"
+
 	"github.com/babenskidanchik/luggage-platform/backend/internal/auth"
 	"github.com/babenskidanchik/luggage-platform/backend/internal/domain"
 	"github.com/babenskidanchik/luggage-platform/backend/internal/hotel"
@@ -9,8 +11,6 @@ import (
 	"github.com/babenskidanchik/luggage-platform/backend/internal/repository"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
-
-	"time"
 )
 
 func NewRouter(
@@ -141,12 +141,10 @@ func NewRouter(
 		hotelLocationHandler.Update,
 	)
 
-	hotelRoutes.POST(
-		"/applications",
+	api.POST(
+		"/hotel/applications",
 		requireAuth,
-		middleware.RequireRole(
-			domain.RoleGuest,
-		),
+		middleware.RequireRole(domain.RoleGuest),
 		hotelApplicationHandler.Submit,
 	)
 

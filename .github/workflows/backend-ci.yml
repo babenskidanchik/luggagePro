@@ -1,0 +1,65 @@
+name: Backend CI
+
+on:
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+      - "docker-compose.yml"
+  push:
+    branches:
+      - main
+      - "work/**"
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+      - "docker-compose.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: luggage_test
+          POSTGRES_USER: luggage
+          POSTGRES_PASSWORD: luggage_test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U luggage -d luggage_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      TEST_DATABASE_URL: postgres://luggage:luggage_test_password@localhost:5432/luggage_test?sslmode=disable
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Verify formatting
+        run: |
+          test -z "$(gofmt -l .)"
+
+      - name: Run unit and integration tests
+        run: go test -race -p 1 ./...
+
+      - name: Run go vet
+        run: go vet ./...
