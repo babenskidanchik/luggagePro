@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/babenskidanchik/luggage-platform/backend/internal/domain"
@@ -31,6 +32,7 @@ func (s *fakeModerationService) ListPending(
 	return []domain.HotelApplication{
 		{
 			ID:          "application-id",
+			VenueType:   domain.VenueTypeLuggageShop,
 			DisplayName: "Batumi Luggage Spot",
 			Status:      domain.HotelApplicationPending,
 		},
@@ -80,6 +82,16 @@ func TestModerationHandlerListPending(
 		t.Fatalf(
 			"expected limit 20, got %d",
 			service.limit,
+		)
+	}
+
+	if !strings.Contains(
+		recorder.Body.String(),
+		"\"venue_type\":\"luggage_shop\"",
+	) {
+		t.Fatalf(
+			"expected venue_type in moderation response, got %s",
+			recorder.Body.String(),
 		)
 	}
 
