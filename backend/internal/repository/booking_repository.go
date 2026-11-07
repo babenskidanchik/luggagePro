@@ -80,6 +80,87 @@ func (r *BookingRepository) ListByHotelUserID(
 	return bookings, nil
 }
 
+func (r *BookingRepository) TransitionStatusForHotelUserID(
+	ctx context.Context,
+	hotelUserID string,
+	bookingID string,
+	expectedStatus domain.BookingStatus,
+	nextStatus domain.BookingStatus,
+) (*domain.Booking, error) {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("begin booking status transition: %w", err)
+	}
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
+
+	const lockQuery = `
+		SELECT b.status::text
+		FROM bookings b
+		INNER JOIN hotels h ON h.id = b.hotel_id
+		WHERE b.id = CAST($1 AS uuid)
+			AND h.user_id = CAST($2 AS uuid)
+		FOR UPDATE OF b
+	`
+
+	var currentStatus string
+	err = tx.QueryRow(ctx, lockQuery, bookingID, hotelUserID).Scan(&currentStatus)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrBookingNotFound
+		}
+		return nil, fmt.Errorf("lock booking for status transition: %w", err)
+	}
+
+	if currentStatus != string(expectedStatus) {
+		return nil, domain.ErrBookingInvalidTransition
+	}
+
+	const updateQuery = `
+		UPDATE bookings
+		SET status = $2::booking_status,
+			updated_at = NOW()
+		WHERE id = CAST($1 AS uuid)
+		RETURNING
+			CAST(id AS text),
+			CAST(guest_user_id AS text),
+			CAST(hotel_id AS text),
+			luggage_count,
+			starts_at,
+			ends_at,
+			status,
+			created_at,
+			updated_at
+	`
+
+	var result domain.Booking
+	err = tx.QueryRow(
+		ctx,
+		updateQuery,
+		bookingID,
+		string(nextStatus),
+	).Scan(
+		&result.ID,
+		&result.GuestUserID,
+		&result.HotelID,
+		&result.LuggageCount,
+		&result.StartsAt,
+		&result.EndsAt,
+		&result.Status,
+		&result.CreatedAt,
+		&result.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("update booking status: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("commit booking status transition: %w", err)
+	}
+	return &result, nil
+}
+
 func (r *BookingRepository) Create(
 	ctx context.Context,
 	guestUserID string,
