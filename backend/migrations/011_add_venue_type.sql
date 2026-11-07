@@ -1,11 +1,11 @@
-ALTER TABLE hotel_application 
-ADD COLUMN vanue_type VARCHAR(32) NOT NULL DEFAULT 'hotel';
+ALTER TABLE hotel_applications
+ADD COLUMN venue_type VARCHAR(32) NOT NULL DEFAULT 'hotel';
 
 ALTER TABLE hotels
-ADD COLUMN vanue_type VARCHAR(32) NOT NULL DEFAULT 'hotel';
+ADD COLUMN venue_type VARCHAR(32) NOT NULL DEFAULT 'hotel';
 
 ALTER TABLE hotel_applications
-ADD CONSTRAINT hotel_applications_vanue_type_check
+ADD CONSTRAINT hotel_applications_venue_type_check
 CHECK (
     venue_type IN (
         'hotel',

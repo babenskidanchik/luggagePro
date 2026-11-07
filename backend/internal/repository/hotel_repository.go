@@ -46,6 +46,7 @@ func (r *HotelRepository) UpdateCoordinatesByUserID(
 			address,
 			latitude,
 			longitude,
+			luggage_capacity,
 			is_active,
 			created_at,
 			updated_at
@@ -69,6 +70,7 @@ func (r *HotelRepository) UpdateCoordinatesByUserID(
 		&hotel.Address,
 		&hotel.Latitude,
 		&hotel.Longitude,
+		&hotel.LuggageCapacity,
 		&hotel.VenueType,
 		&hotel.IsActive,
 		&hotel.CreatedAt,
@@ -106,6 +108,7 @@ func (r *HotelRepository) ListPublicByCity(
 			latitude,
 			longitude,
 			venue_type,
+			luggage_capacity,
 			is_active,
 			created_at,
 			updated_at
@@ -150,6 +153,7 @@ func (r *HotelRepository) ListPublicByCity(
 			&hotel.Address,
 			&hotel.Latitude,
 			&hotel.Longitude,
+			&hotel.LuggageCapacity,
 			&hotel.VenueType,
 			&hotel.IsActive,
 			&hotel.CreatedAt,

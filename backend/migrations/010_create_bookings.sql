@@ -28,7 +28,7 @@ CREATE TABLE bookings (
         DEFAULT NOW(),
     
     updated_at TIMESTAMPTZ NOT NULL
-        DEFAULT NOW()
+        DEFAULT NOW(),
 
     CONSTRAINT bookings_luggage_count_check
         CHECK (

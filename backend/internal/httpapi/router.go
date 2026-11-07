@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"github.com/babenskidanchik/luggage-platform/backend/internal/auth"
+	"github.com/babenskidanchik/luggage-platform/backend/internal/booking"
 	"github.com/babenskidanchik/luggage-platform/backend/internal/domain"
 	"github.com/babenskidanchik/luggage-platform/backend/internal/hotel"
 	"github.com/babenskidanchik/luggage-platform/backend/internal/httpapi/handlers"
@@ -120,10 +121,30 @@ func NewRouter(
 		publicHotelRoutes,
 	)
 
+	bookingRepository :=
+		repository.NewBookingRepository(db)
+
+	bookingService :=
+		booking.NewService(bookingRepository)
+
+	bookingHandler :=
+		handlers.NewBookingHandler(bookingService)
+
 	requireAuth :=
 		middleware.RequireAuth(authService)
 
 	api := router.Group("/api/v1")
+
+	bookingRoutes := api.Group(
+		"/bookings",
+		requireAuth,
+		middleware.RequireRole(domain.RoleGuest),
+	)
+
+	bookingRoutes.POST(
+		"",
+		bookingHandler.Create,
+	)
 
 	hotelRoutes := api.Group(
 		"/hotel",

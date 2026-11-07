@@ -44,4 +44,12 @@ var (
 	ErrHotelUnavailable = errors.New(
 		"hotel is unavailable",
 	)
+
+	ErrInvalidBooking = errors.New(
+		"invalid booking",
+	)
+
+	ErrBookingCapacityExceeded = errors.New(
+		"booking luggage capacity exceeded",
+	)
 )

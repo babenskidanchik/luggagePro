@@ -17,6 +17,8 @@ type Hotel struct {
 	Latitude  *float64
 	Longitude *float64
 
+	LuggageCapacity int
+
 	IsActive  bool
 	CreatedAt time.Time
 	UpdatedAt time.Time
