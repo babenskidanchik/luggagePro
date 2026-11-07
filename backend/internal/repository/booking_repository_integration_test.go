@@ -169,6 +169,38 @@ func TestBookingRepositoryConcurrentCapacityIntegration(t *testing.T) {
 	}
 }
 
+func TestBookingRepositoryRejectsWhenHotelPausedIntegration(t *testing.T) {
+	ctx, db := newBookingTestDB(t)
+
+	guest := createBookingTestUser(t, ctx, db, "paused-guest@example.com", "guest")
+	partner := createBookingTestUser(t, ctx, db, "paused-partner@example.com", "hotel")
+	hotelID := createBookingTestHotel(t, ctx, db, partner, 5)
+
+	hotelRepo := NewHotelRepository(db)
+	_, err := hotelRepo.UpdateBookingSettingsByUserID(
+		ctx,
+		partner,
+		5,
+		false,
+	)
+	if err != nil {
+		t.Fatalf("pause hotel bookings: %v", err)
+	}
+
+	start := time.Now().UTC().Add(24 * time.Hour).Truncate(time.Second)
+	_, err = NewBookingRepository(db).Create(
+		ctx,
+		guest,
+		hotelID,
+		1,
+		start,
+		start.Add(time.Hour),
+	)
+	if !errors.Is(err, domain.ErrHotelUnavailable) {
+		t.Fatalf("expected hotel unavailable error, got %v", err)
+	}
+}
+
 func newBookingTestDB(t *testing.T) (context.Context, *pgxpool.Pool) {
 	t.Helper()
 
