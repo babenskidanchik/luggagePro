@@ -54,4 +54,5 @@ var (
 	)
 	ErrBookingNotFound = errors.New("booking not found")
 	ErrBookingInvalidTransition = errors.New("invalid booking status transition")
+	ErrBookingCancellationTooLate = errors.New("booking can no longer be cancelled")
 )
