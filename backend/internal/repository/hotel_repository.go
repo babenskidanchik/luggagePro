@@ -152,6 +152,7 @@ func (r *HotelRepository) ListPublicByCity(
 		FROM hotels
 		WHERE
 		  	is_active = TRUE
+			AND accepting_bookings = TRUE
 			AND latitude IS NOT NULL
 			AND longitude IS NOT NULL
 			AND city = $1
