@@ -29,6 +29,9 @@ type Booking struct {
 
 	Status BookingStatus
 
+	CancelledAt *time.Time
+	CancellationRefundEligible *bool
+
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
