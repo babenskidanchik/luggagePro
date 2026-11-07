@@ -431,6 +431,22 @@ func TestBookingRepositoryGuestCancellationRefundEligibilityIntegration(t *testi
 	if !errors.Is(err, domain.ErrBookingNotFound) {
 		t.Fatalf("expected another guest not to access booking, got %v", err)
 	}
+
+	guestBookings, err := repo.ListByGuestUserID(ctx, guest, 50, 0)
+	if err != nil {
+		t.Fatalf("list guest bookings: %v", err)
+	}
+	if len(guestBookings) != 2 {
+		t.Fatalf("expected guest to see 2 own bookings, got %d", len(guestBookings))
+	}
+
+	otherGuestBookings, err := repo.ListByGuestUserID(ctx, otherGuest, 50, 0)
+	if err != nil {
+		t.Fatalf("list other guest bookings: %v", err)
+	}
+	if len(otherGuestBookings) != 0 {
+		t.Fatalf("expected other guest to see no bookings, got %d", len(otherGuestBookings))
+	}
 }
 
 func newBookingTestDB(t *testing.T) (context.Context, *pgxpool.Pool) {
