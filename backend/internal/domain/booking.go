@@ -9,6 +9,8 @@ const (
 
 	BookingStatusConfirmed BookingStatus = "confirmed"
 
+	BookingStatusBaggageReceived BookingStatus = "baggage_received"
+
 	BookingStatusCancelled BookingStatus = "cancelled"
 
 	BookingStatusCompleted BookingStatus = "completed"
