@@ -80,6 +80,151 @@ func (r *BookingRepository) ListByHotelUserID(
 	return bookings, nil
 }
 
+func (r *BookingRepository) ListByGuestUserID(
+	ctx context.Context,
+	guestUserID string,
+	limit int,
+	offset int,
+) ([]domain.Booking, error) {
+	const query = `
+		SELECT
+			CAST(id AS text),
+			CAST(guest_user_id AS text),
+			CAST(hotel_id AS text),
+			luggage_count,
+			starts_at,
+			ends_at,
+			status,
+			cancelled_at,
+			cancellation_refund_eligible,
+			created_at,
+			updated_at
+		FROM bookings
+		WHERE guest_user_id = CAST($1 AS uuid)
+		ORDER BY created_at DESC
+		LIMIT $2
+		OFFSET $3
+	`
+
+	rows, err := r.db.Query(ctx, query, guestUserID, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("list guest bookings: %w", err)
+	}
+	defer rows.Close()
+
+	bookings := make([]domain.Booking, 0)
+	for rows.Next() {
+		var item domain.Booking
+		if err := rows.Scan(
+			&item.ID,
+			&item.GuestUserID,
+			&item.HotelID,
+			&item.LuggageCount,
+			&item.StartsAt,
+			&item.EndsAt,
+			&item.Status,
+			&item.CancelledAt,
+			&item.CancellationRefundEligible,
+			&item.CreatedAt,
+			&item.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan guest booking: %w", err)
+		}
+		bookings = append(bookings, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate guest bookings: %w", err)
+	}
+	return bookings, nil
+}
+
+func (r *BookingRepository) CancelForGuestUserID(
+	ctx context.Context,
+	guestUserID string,
+	bookingID string,
+) (*domain.Booking, error) {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("begin booking cancellation: %w", err)
+	}
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
+
+	const lockQuery = `
+		SELECT status::text, starts_at
+		FROM bookings
+		WHERE id = CAST($1 AS uuid)
+			AND guest_user_id = CAST($2 AS uuid)
+		FOR UPDATE
+	`
+
+	var currentStatus string
+	var startsAt time.Time
+	err = tx.QueryRow(ctx, lockQuery, bookingID, guestUserID).Scan(
+		&currentStatus,
+		&startsAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrBookingNotFound
+		}
+		return nil, fmt.Errorf("lock booking for cancellation: %w", err)
+	}
+
+	if currentStatus != string(domain.BookingStatusConfirmed) {
+		return nil, domain.ErrBookingInvalidTransition
+	}
+	if !startsAt.After(time.Now()) {
+		return nil, domain.ErrBookingCancellationTooLate
+	}
+
+	const updateQuery = `
+		UPDATE bookings
+		SET
+			status = 'cancelled',
+			cancelled_at = NOW(),
+			cancellation_refund_eligible = (starts_at >= NOW() + INTERVAL '2 hours'),
+			updated_at = NOW()
+		WHERE id = CAST($1 AS uuid)
+		RETURNING
+			CAST(id AS text),
+			CAST(guest_user_id AS text),
+			CAST(hotel_id AS text),
+			luggage_count,
+			starts_at,
+			ends_at,
+			status,
+			cancelled_at,
+			cancellation_refund_eligible,
+			created_at,
+			updated_at
+	`
+
+	var result domain.Booking
+	err = tx.QueryRow(ctx, updateQuery, bookingID).Scan(
+		&result.ID,
+		&result.GuestUserID,
+		&result.HotelID,
+		&result.LuggageCount,
+		&result.StartsAt,
+		&result.EndsAt,
+		&result.Status,
+		&result.CancelledAt,
+		&result.CancellationRefundEligible,
+		&result.CreatedAt,
+		&result.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("cancel booking: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("commit booking cancellation: %w", err)
+	}
+	return &result, nil
+}
+
 func (r *BookingRepository) TransitionStatusForHotelUserID(
 	ctx context.Context,
 	hotelUserID string,
