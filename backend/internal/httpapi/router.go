@@ -185,6 +185,16 @@ func NewRouter(
 		hotelBookingsHandler.List,
 	)
 
+	hotelRoutes.POST(
+		"/bookings/:id/receive",
+		hotelBookingsHandler.Receive,
+	)
+
+	hotelRoutes.POST(
+		"/bookings/:id/complete",
+		hotelBookingsHandler.Complete,
+	)
+
 	api.POST(
 		"/hotel/applications",
 		requireAuth,
