@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/babenskidanchik/luggage-platform/backend/internal/booking"
 	"github.com/babenskidanchik/luggage-platform/backend/internal/domain"
 	"github.com/babenskidanchik/luggage-platform/backend/internal/httpapi/middleware"
 	"github.com/gin-gonic/gin"
@@ -45,7 +44,7 @@ func (h *HotelBookingsHandler) List(c *gin.Context) {
 		offset,
 	)
 	if err != nil {
-		if err == domain.ErrInvalidBooking || err == booking.ErrInvalidHotelBookingList {
+		if err == domain.ErrInvalidBooking {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid booking list parameters"})
 			return
 		}
