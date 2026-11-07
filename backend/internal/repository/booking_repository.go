@@ -152,7 +152,7 @@ func (r *BookingRepository) CancelForGuestUserID(
 	}()
 
 	const lockQuery = `
-		SELECT status::text, starts_at
+		SELECT status::text, starts_at, NOW()
 		FROM bookings
 		WHERE id = CAST($1 AS uuid)
 			AND guest_user_id = CAST($2 AS uuid)
@@ -161,9 +161,11 @@ func (r *BookingRepository) CancelForGuestUserID(
 
 	var currentStatus string
 	var startsAt time.Time
+	var databaseNow time.Time
 	err = tx.QueryRow(ctx, lockQuery, bookingID, guestUserID).Scan(
 		&currentStatus,
 		&startsAt,
+		&databaseNow,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -175,7 +177,7 @@ func (r *BookingRepository) CancelForGuestUserID(
 	if currentStatus != string(domain.BookingStatusConfirmed) {
 		return nil, domain.ErrBookingInvalidTransition
 	}
-	if !startsAt.After(time.Now()) {
+	if !startsAt.After(databaseNow) {
 		return nil, domain.ErrBookingCancellationTooLate
 	}
 
