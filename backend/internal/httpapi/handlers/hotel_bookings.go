@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -12,6 +13,16 @@ import (
 )
 
 type HotelBookingsService interface {
+	ConfirmBaggageReceived(
+		ctx context.Context,
+		hotelUserID string,
+		bookingID string,
+	) (*domain.Booking, error)
+	Complete(
+		ctx context.Context,
+		hotelUserID string,
+		bookingID string,
+	) (*domain.Booking, error)
 	ListForHotel(
 		ctx context.Context,
 		hotelUserID string,
@@ -79,5 +90,63 @@ func (h *HotelBookingsHandler) List(c *gin.Context) {
 		"bookings": bookings,
 		"limit": limit,
 		"offset": offset,
+	})
+}
+
+func (h *HotelBookingsHandler) Receive(c *gin.Context) {
+	user, ok := middleware.CurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+		return
+	}
+
+	result, err := h.service.ConfirmBaggageReceived(
+		c.Request.Context(),
+		user.ID,
+		c.Param("id"),
+	)
+	h.respondToTransition(c, result, err)
+}
+
+func (h *HotelBookingsHandler) Complete(c *gin.Context) {
+	user, ok := middleware.CurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+		return
+	}
+
+	result, err := h.service.Complete(
+		c.Request.Context(),
+		user.ID,
+		c.Param("id"),
+	)
+	h.respondToTransition(c, result, err)
+}
+
+func (h *HotelBookingsHandler) respondToTransition(
+	c *gin.Context,
+	result *domain.Booking,
+	err error,
+) {
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrInvalidBooking):
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid booking"})
+		case errors.Is(err, domain.ErrBookingNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"error": "booking not found"})
+		case errors.Is(err, domain.ErrBookingInvalidTransition):
+			c.JSON(http.StatusConflict, gin.H{"error": "booking cannot move to requested status"})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"booking": gin.H{
+			"id": result.ID,
+			"status": result.Status,
+			"updated_at": result.UpdatedAt,
+		},
 	})
 }
