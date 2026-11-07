@@ -23,6 +23,63 @@ func NewBookingRepository(
 	}
 }
 
+func (r *BookingRepository) ListByHotelUserID(
+	ctx context.Context,
+	hotelUserID string,
+	limit int,
+	offset int,
+) ([]domain.Booking, error) {
+	const query = `
+		SELECT
+			CAST(b.id AS text),
+			CAST(b.guest_user_id AS text),
+			CAST(b.hotel_id AS text),
+			b.luggage_count,
+			b.starts_at,
+			b.ends_at,
+			b.status,
+			b.created_at,
+			b.updated_at
+		FROM bookings b
+		INNER JOIN hotels h ON h.id = b.hotel_id
+		WHERE h.user_id = CAST($1 AS uuid)
+		ORDER BY
+			CASE WHEN b.ends_at >= NOW() THEN 0 ELSE 1 END,
+			b.starts_at ASC
+		LIMIT $2
+		OFFSET $3
+	`
+
+	rows, err := r.db.Query(ctx, query, hotelUserID, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("list hotel bookings: %w", err)
+	}
+	defer rows.Close()
+
+	bookings := make([]domain.Booking, 0)
+	for rows.Next() {
+		var item domain.Booking
+		if err := rows.Scan(
+			&item.ID,
+			&item.GuestUserID,
+			&item.HotelID,
+			&item.LuggageCount,
+			&item.StartsAt,
+			&item.EndsAt,
+			&item.Status,
+			&item.CreatedAt,
+			&item.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan hotel booking: %w", err)
+		}
+		bookings = append(bookings, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate hotel bookings: %w", err)
+	}
+	return bookings, nil
+}
+
 func (r *BookingRepository) Create(
 	ctx context.Context,
 	guestUserID string,
