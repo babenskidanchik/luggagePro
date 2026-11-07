@@ -201,6 +201,69 @@ func TestBookingRepositoryRejectsWhenHotelPausedIntegration(t *testing.T) {
 	}
 }
 
+func TestBookingRepositoryListsOnlyBookingsForOwningHotelIntegration(t *testing.T) {
+	ctx, db := newBookingTestDB(t)
+
+	guest := createBookingTestUser(t, ctx, db, "hotel-list-guest@example.com", "guest")
+	hotelOwner1 := createBookingTestUser(t, ctx, db, "hotel-list-owner1@example.com", "hotel")
+	hotelOwner2 := createBookingTestUser(t, ctx, db, "hotel-list-owner2@example.com", "hotel")
+
+	hotel1 := createBookingTestHotel(t, ctx, db, hotelOwner1, 10)
+	hotel2 := createBookingTestHotel(t, ctx, db, hotelOwner2, 10)
+
+	start := time.Now().UTC().Add(24 * time.Hour).Truncate(time.Second)
+	repo := NewBookingRepository(db)
+
+	created, err := repo.Create(
+		ctx,
+		guest,
+		hotel1,
+		2,
+		start,
+		start.Add(2*time.Hour),
+	)
+	if err != nil {
+		t.Fatalf("create booking for first hotel: %v", err)
+	}
+
+	_, err = repo.Create(
+		ctx,
+		guest,
+		hotel2,
+		1,
+		start,
+		start.Add(time.Hour),
+	)
+	if err != nil {
+		t.Fatalf("create booking for second hotel: %v", err)
+	}
+
+	firstHotelBookings, err := repo.ListByHotelUserID(ctx, hotelOwner1, 50, 0)
+	if err != nil {
+		t.Fatalf("list first hotel bookings: %v", err)
+	}
+	if len(firstHotelBookings) != 1 {
+		t.Fatalf("expected 1 booking for first hotel, got %d", len(firstHotelBookings))
+	}
+	if firstHotelBookings[0].ID != created.ID {
+		t.Fatalf("expected booking %q, got %q", created.ID, firstHotelBookings[0].ID)
+	}
+	if firstHotelBookings[0].HotelID != hotel1 {
+		t.Fatalf("expected hotel %q, got %q", hotel1, firstHotelBookings[0].HotelID)
+	}
+
+	secondHotelBookings, err := repo.ListByHotelUserID(ctx, hotelOwner2, 50, 0)
+	if err != nil {
+		t.Fatalf("list second hotel bookings: %v", err)
+	}
+	if len(secondHotelBookings) != 1 {
+		t.Fatalf("expected 1 booking for second hotel, got %d", len(secondHotelBookings))
+	}
+	if secondHotelBookings[0].HotelID != hotel2 {
+		t.Fatalf("expected only bookings for hotel %q, got %q", hotel2, secondHotelBookings[0].HotelID)
+	}
+}
+
 func newBookingTestDB(t *testing.T) (context.Context, *pgxpool.Pool) {
 	t.Helper()
 
