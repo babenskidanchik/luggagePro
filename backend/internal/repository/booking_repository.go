@@ -230,9 +230,14 @@ func (r *BookingRepository) Create(
 		SELECT COALESCE(SUM(luggage_count), 0)
 		FROM bookings
 		WHERE hotel_id = CAST($1 AS uuid)
-			AND status IN ('pending', 'confirmed', 'baggage_received')
-			AND starts_at < $3
-			AND ends_at > $2
+			AND (
+				status = 'baggage_received'
+				OR (
+					status IN ('pending', 'confirmed')
+					AND starts_at < $3
+					AND ends_at > $2
+				)
+			)
 	`
 
 	var occupiedCapacity int64
