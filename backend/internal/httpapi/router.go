@@ -159,6 +159,16 @@ func NewRouter(
 		bookingHandler.Create,
 	)
 
+	bookingRoutes.GET(
+		"",
+		bookingHandler.List,
+	)
+
+	bookingRoutes.POST(
+		"/:id/cancel",
+		bookingHandler.Cancel,
+	)
+
 	hotelRoutes := api.Group(
 		"/hotel",
 	)
