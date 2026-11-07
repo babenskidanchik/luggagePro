@@ -9,6 +9,17 @@ import (
 )
 
 type BookingRepository interface {
+	ListByGuestUserID(
+		ctx context.Context,
+		guestUserID string,
+		limit int,
+		offset int,
+	) ([]domain.Booking, error)
+	CancelForGuestUserID(
+		ctx context.Context,
+		guestUserID string,
+		bookingID string,
+	) (*domain.Booking, error)
 	TransitionStatusForHotelUserID(
 		ctx context.Context,
 		hotelUserID string,
@@ -40,6 +51,47 @@ func NewService(repository BookingRepository) *Service {
 	return &Service{
 		repository: repository,
 	}
+}
+
+func (s *Service) ListForGuest(
+	ctx context.Context,
+	guestUserID string,
+	limit int,
+	offset int,
+) ([]domain.Booking, error) {
+	guestUserID = strings.TrimSpace(guestUserID)
+	if guestUserID == "" {
+		return nil, domain.ErrInvalidBooking
+	}
+	if limit < 1 || limit > 100 {
+		limit = 50
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	return s.repository.ListByGuestUserID(
+		ctx,
+		guestUserID,
+		limit,
+		offset,
+	)
+}
+
+func (s *Service) CancelForGuest(
+	ctx context.Context,
+	guestUserID string,
+	bookingID string,
+) (*domain.Booking, error) {
+	guestUserID = strings.TrimSpace(guestUserID)
+	bookingID = strings.TrimSpace(bookingID)
+	if guestUserID == "" || bookingID == "" {
+		return nil, domain.ErrInvalidBooking
+	}
+	return s.repository.CancelForGuestUserID(
+		ctx,
+		guestUserID,
+		bookingID,
+	)
 }
 
 func (s *Service) ListForHotel(
