@@ -90,6 +90,43 @@ func (r *HotelRepository) UpdateCoordinatesByUserID(
 	return &hotel, nil
 }
 
+func (r *HotelRepository) UpdateBookingSettingsByUserID(
+	ctx context.Context,
+	userID string,
+	luggageCapacity int,
+	acceptingBookings bool,
+) (*domain.Hotel, error) {
+	const query = `
+		UPDATE hotels
+		SET
+			luggage_capacity = $2,
+			accepting_bookings = $3,
+			updated_at = NOW()
+		WHERE user_id = CAST($1 AS uuid)
+		RETURNING luggage_capacity, accepting_bookings
+	`
+
+	var result domain.Hotel
+	err := r.db.QueryRow(
+		ctx,
+		query,
+		userID,
+		luggageCapacity,
+		acceptingBookings,
+	).Scan(
+		&result.LuggageCapacity,
+		&result.AcceptingBookings,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrHotelNotFound
+		}
+		return nil, fmt.Errorf("update hotel booking settings: %w", err)
+	}
+
+	return &result, nil
+}
+
 func (r *HotelRepository) ListPublicByCity(
 	ctx context.Context,
 	city string,
