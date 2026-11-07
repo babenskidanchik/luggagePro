@@ -103,6 +103,16 @@ func NewRouter(
 			hotelLocationService,
 		)
 
+	hotelBookingSettingsService :=
+		hotel.NewBookingSettingsService(
+			hotelRepository,
+		)
+
+	hotelBookingSettingsHandler :=
+		handlers.NewHotelBookingSettingsHandler(
+			hotelBookingSettingsService,
+		)
+
 	moderationService :=
 		hotel.NewModerationService(
 			hotelApplicationRepository,
@@ -160,6 +170,11 @@ func NewRouter(
 	hotelRoutes.PATCH(
 		"/location",
 		hotelLocationHandler.Update,
+	)
+
+	hotelRoutes.PATCH(
+		"/booking-settings",
+		hotelBookingSettingsHandler.Update,
 	)
 
 	api.POST(
