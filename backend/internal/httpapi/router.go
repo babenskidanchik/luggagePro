@@ -140,6 +140,9 @@ func NewRouter(
 	bookingHandler :=
 		handlers.NewBookingHandler(bookingService)
 
+	hotelBookingsHandler :=
+		handlers.NewHotelBookingsHandler(bookingService)
+
 	requireAuth :=
 		middleware.RequireAuth(authService)
 
@@ -175,6 +178,11 @@ func NewRouter(
 	hotelRoutes.PATCH(
 		"/booking-settings",
 		hotelBookingSettingsHandler.Update,
+	)
+
+	hotelRoutes.GET(
+		"/bookings",
+		hotelBookingsHandler.List,
 	)
 
 	api.POST(
