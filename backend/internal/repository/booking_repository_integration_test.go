@@ -264,6 +264,84 @@ func TestBookingRepositoryListsOnlyBookingsForOwningHotelIntegration(t *testing.
 	}
 }
 
+func TestBookingRepositoryHotelBaggageLifecycleIntegration(t *testing.T) {
+	ctx, db := newBookingTestDB(t)
+
+	guest := createBookingTestUser(t, ctx, db, "baggage-lifecycle-guest@example.com", "guest")
+	hotelOwner := createBookingTestUser(t, ctx, db, "baggage-lifecycle-owner@example.com", "hotel")
+	otherHotelOwner := createBookingTestUser(t, ctx, db, "baggage-lifecycle-other@example.com", "hotel")
+	hotelID := createBookingTestHotel(t, ctx, db, hotelOwner, 5)
+	createBookingTestHotel(t, ctx, db, otherHotelOwner, 5)
+
+	start := time.Now().UTC().Add(24 * time.Hour).Truncate(time.Second)
+	repo := NewBookingRepository(db)
+	created, err := repo.Create(ctx, guest, hotelID, 1, start, start.Add(time.Hour))
+	if err != nil {
+		t.Fatalf("create booking: %v", err)
+	}
+
+	_, err = repo.TransitionStatusForHotelUserID(
+		ctx,
+		otherHotelOwner,
+		created.ID,
+		domain.BookingStatusConfirmed,
+		domain.BookingStatusBaggageReceived,
+	)
+	if !errors.Is(err, domain.ErrBookingNotFound) {
+		t.Fatalf("expected other hotel to be unable to access booking, got %v", err)
+	}
+
+	_, err = repo.TransitionStatusForHotelUserID(
+		ctx,
+		hotelOwner,
+		created.ID,
+		domain.BookingStatusBaggageReceived,
+		domain.BookingStatusCompleted,
+	)
+	if !errors.Is(err, domain.ErrBookingInvalidTransition) {
+		t.Fatalf("expected completion before receipt to fail, got %v", err)
+	}
+
+	received, err := repo.TransitionStatusForHotelUserID(
+		ctx,
+		hotelOwner,
+		created.ID,
+		domain.BookingStatusConfirmed,
+		domain.BookingStatusBaggageReceived,
+	)
+	if err != nil {
+		t.Fatalf("confirm baggage receipt: %v", err)
+	}
+	if received.Status != domain.BookingStatusBaggageReceived {
+		t.Fatalf("expected baggage_received status, got %q", received.Status)
+	}
+
+	_, err = repo.TransitionStatusForHotelUserID(
+		ctx,
+		hotelOwner,
+		created.ID,
+		domain.BookingStatusConfirmed,
+		domain.BookingStatusBaggageReceived,
+	)
+	if !errors.Is(err, domain.ErrBookingInvalidTransition) {
+		t.Fatalf("expected duplicate receipt confirmation to fail, got %v", err)
+	}
+
+	completed, err := repo.TransitionStatusForHotelUserID(
+		ctx,
+		hotelOwner,
+		created.ID,
+		domain.BookingStatusBaggageReceived,
+		domain.BookingStatusCompleted,
+	)
+	if err != nil {
+		t.Fatalf("confirm baggage release: %v", err)
+	}
+	if completed.Status != domain.BookingStatusCompleted {
+		t.Fatalf("expected completed status, got %q", completed.Status)
+	}
+}
+
 func newBookingTestDB(t *testing.T) (context.Context, *pgxpool.Pool) {
 	t.Helper()
 
