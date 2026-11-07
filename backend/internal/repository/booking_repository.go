@@ -44,9 +44,10 @@ func (r *BookingRepository) Create(
 	}()
 
 	const hotelQuery = `
-		SELECT 
+		SELECT
 			luggage_capacity,
 			is_active,
+			accepting_bookings,
 			latitude IS NOT NULL
 				AND longitude IS NOT NULL
 		FROM hotels
@@ -55,9 +56,10 @@ func (r *BookingRepository) Create(
 	`
 
 	var (
-		capacity       int
-		isActive       bool
-		hasCoordinates bool
+		capacity          int
+		isActive          bool
+		acceptingBookings bool
+		hasCoordinates    bool
 	)
 
 	err = tx.QueryRow(
@@ -67,6 +69,7 @@ func (r *BookingRepository) Create(
 	).Scan(
 		&capacity,
 		&isActive,
+		&acceptingBookings,
 		&hasCoordinates,
 	)
 
@@ -81,7 +84,7 @@ func (r *BookingRepository) Create(
 		)
 	}
 
-	if !isActive || !hasCoordinates || capacity <= 0 {
+	if !isActive || !acceptingBookings || !hasCoordinates || capacity <= 0 {
 		return nil, domain.ErrHotelUnavailable
 	}
 
