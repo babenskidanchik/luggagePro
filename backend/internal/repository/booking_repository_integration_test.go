@@ -270,7 +270,7 @@ func TestBookingRepositoryHotelBaggageLifecycleIntegration(t *testing.T) {
 	guest := createBookingTestUser(t, ctx, db, "baggage-lifecycle-guest@example.com", "guest")
 	hotelOwner := createBookingTestUser(t, ctx, db, "baggage-lifecycle-owner@example.com", "hotel")
 	otherHotelOwner := createBookingTestUser(t, ctx, db, "baggage-lifecycle-other@example.com", "hotel")
-	hotelID := createBookingTestHotel(t, ctx, db, hotelOwner, 5)
+	hotelID := createBookingTestHotel(t, ctx, db, hotelOwner, 1)
 	createBookingTestHotel(t, ctx, db, otherHotelOwner, 5)
 
 	start := time.Now().UTC().Add(24 * time.Hour).Truncate(time.Second)
@@ -316,6 +316,18 @@ func TestBookingRepositoryHotelBaggageLifecycleIntegration(t *testing.T) {
 		t.Fatalf("expected baggage_received status, got %q", received.Status)
 	}
 
+	_, err = repo.Create(
+		ctx,
+		guest,
+		hotelID,
+		1,
+		start,
+		start.Add(time.Hour),
+	)
+	if !errors.Is(err, domain.ErrBookingCapacityExceeded) {
+		t.Fatalf("expected received baggage to occupy capacity, got %v", err)
+	}
+
 	_, err = repo.TransitionStatusForHotelUserID(
 		ctx,
 		hotelOwner,
@@ -339,6 +351,18 @@ func TestBookingRepositoryHotelBaggageLifecycleIntegration(t *testing.T) {
 	}
 	if completed.Status != domain.BookingStatusCompleted {
 		t.Fatalf("expected completed status, got %q", completed.Status)
+	}
+
+	_, err = repo.Create(
+		ctx,
+		guest,
+		hotelID,
+		1,
+		start,
+		start.Add(time.Hour),
+	)
+	if err != nil {
+		t.Fatalf("expected completed booking to release capacity: %v", err)
 	}
 }
 
