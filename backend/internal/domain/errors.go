@@ -52,4 +52,6 @@ var (
 	ErrBookingCapacityExceeded = errors.New(
 		"booking luggage capacity exceeded",
 	)
+	ErrBookingNotFound = errors.New("booking not found")
+	ErrBookingInvalidTransition = errors.New("invalid booking status transition")
 )
