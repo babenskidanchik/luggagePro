@@ -367,6 +367,72 @@ func TestBookingRepositoryHotelBaggageLifecycleIntegration(t *testing.T) {
 	}
 }
 
+func TestBookingRepositoryGuestCancellationRefundEligibilityIntegration(t *testing.T) {
+	ctx, db := newBookingTestDB(t)
+
+	guest := createBookingTestUser(t, ctx, db, "cancel-guest@example.com", "guest")
+	otherGuest := createBookingTestUser(t, ctx, db, "cancel-other-guest@example.com", "guest")
+	hotelOwner := createBookingTestUser(t, ctx, db, "cancel-hotel-owner@example.com", "hotel")
+	hotelID := createBookingTestHotel(t, ctx, db, hotelOwner, 10)
+	repo := NewBookingRepository(db)
+
+	now := time.Now().UTC().Truncate(time.Second)
+	eligibleBooking, err := repo.Create(
+		ctx,
+		guest,
+		hotelID,
+		1,
+		now.Add(4*time.Hour),
+		now.Add(6*time.Hour),
+	)
+	if err != nil {
+		t.Fatalf("create booking eligible for refund: %v", err)
+	}
+
+	cancelled, err := repo.CancelForGuestUserID(ctx, guest, eligibleBooking.ID)
+	if err != nil {
+		t.Fatalf("cancel booking with more than two hours remaining: %v", err)
+	}
+	if cancelled.Status != domain.BookingStatusCancelled {
+		t.Fatalf("expected cancelled status, got %q", cancelled.Status)
+	}
+	if cancelled.CancellationRefundEligible == nil || !*cancelled.CancellationRefundEligible {
+		t.Fatal("expected cancellation to be eligible for a full refund")
+	}
+	if cancelled.CancelledAt == nil {
+		t.Fatal("expected cancelled_at to be recorded")
+	}
+
+	_, err = repo.CancelForGuestUserID(ctx, guest, eligibleBooking.ID)
+	if !errors.Is(err, domain.ErrBookingInvalidTransition) {
+		t.Fatalf("expected repeated cancellation to fail, got %v", err)
+	}
+
+	noRefundBooking, err := repo.Create(
+		ctx,
+		guest,
+		hotelID,
+		1,
+		now.Add(90*time.Minute),
+		now.Add(3*time.Hour),
+	)
+	if err != nil {
+		t.Fatalf("create booking inside two-hour cancellation window: %v", err)
+	}
+	cancelled, err = repo.CancelForGuestUserID(ctx, guest, noRefundBooking.ID)
+	if err != nil {
+		t.Fatalf("cancel booking inside two-hour window: %v", err)
+	}
+	if cancelled.CancellationRefundEligible == nil || *cancelled.CancellationRefundEligible {
+		t.Fatal("expected cancellation without refund eligibility")
+	}
+
+	_, err = repo.CancelForGuestUserID(ctx, otherGuest, noRefundBooking.ID)
+	if !errors.Is(err, domain.ErrBookingNotFound) {
+		t.Fatalf("expected another guest not to access booking, got %v", err)
+	}
+}
+
 func newBookingTestDB(t *testing.T) (context.Context, *pgxpool.Pool) {
 	t.Helper()
 
