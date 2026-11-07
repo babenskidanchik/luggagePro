@@ -9,6 +9,13 @@ import (
 )
 
 type BookingRepository interface {
+	TransitionStatusForHotelUserID(
+		ctx context.Context,
+		hotelUserID string,
+		bookingID string,
+		expectedStatus domain.BookingStatus,
+		nextStatus domain.BookingStatus,
+	) (*domain.Booking, error)
 	ListByHotelUserID(
 		ctx context.Context,
 		hotelUserID string,
@@ -56,6 +63,55 @@ func (s *Service) ListForHotel(
 		hotelUserID,
 		limit,
 		offset,
+	)
+}
+
+func (s *Service) ConfirmBaggageReceived(
+	ctx context.Context,
+	hotelUserID string,
+	bookingID string,
+) (*domain.Booking, error) {
+	return s.transitionForHotel(
+		ctx,
+		hotelUserID,
+		bookingID,
+		domain.BookingStatusConfirmed,
+		domain.BookingStatusBaggageReceived,
+	)
+}
+
+func (s *Service) Complete(
+	ctx context.Context,
+	hotelUserID string,
+	bookingID string,
+) (*domain.Booking, error) {
+	return s.transitionForHotel(
+		ctx,
+		hotelUserID,
+		bookingID,
+		domain.BookingStatusBaggageReceived,
+		domain.BookingStatusCompleted,
+	)
+}
+
+func (s *Service) transitionForHotel(
+	ctx context.Context,
+	hotelUserID string,
+	bookingID string,
+	expectedStatus domain.BookingStatus,
+	nextStatus domain.BookingStatus,
+) (*domain.Booking, error) {
+	hotelUserID = strings.TrimSpace(hotelUserID)
+	bookingID = strings.TrimSpace(bookingID)
+	if hotelUserID == "" || bookingID == "" {
+		return nil, domain.ErrInvalidBooking
+	}
+	return s.repository.TransitionStatusForHotelUserID(
+		ctx,
+		hotelUserID,
+		bookingID,
+		expectedStatus,
+		nextStatus,
 	)
 }
 
