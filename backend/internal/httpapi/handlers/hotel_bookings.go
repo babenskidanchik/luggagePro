@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -34,8 +35,17 @@ func (h *HotelBookingsHandler) List(c *gin.Context) {
 		return
 	}
 
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
-	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	if err != nil || limit < 1 || limit > 100 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "limit must be between 1 and 100"})
+		return
+	}
+
+	offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if err != nil || offset < 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "offset must be zero or greater"})
+		return
+	}
 
 	items, err := h.service.ListForHotel(
 		c.Request.Context(),
@@ -44,7 +54,7 @@ func (h *HotelBookingsHandler) List(c *gin.Context) {
 		offset,
 	)
 	if err != nil {
-		if err == domain.ErrInvalidBooking {
+		if errors.Is(err, domain.ErrInvalidBooking) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid booking list parameters"})
 			return
 		}
